@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Bird</title>
+</head>
+<body>
+    <canvas id="canvas" width="800" height="600" style="background-color: lightskyblue;"></canvas>
+
+    <script>let canvas;
+        let ctx;
+        let pipeX = 500;
+        let pipeX2 = 1000;
+        let birdY;
+        let birdX;
+        let gap;
+        let gap2;
+        let jump = 0;
+        let score = 0;
+        let dead = false;
+        let start = false;
+        let gravity = 10;
+        let jumpForce = 12;
+        window.onload = function() {
+        
+            resize_canvas();
+            canvas = document.getElementById('canvas');
+            ctx = canvas.getContext('2d');
+            let fps = 30;
+            birdY = canvas.height / 2;
+            gap = randomiseGap();
+            gap2 = randomiseGap();
+            if (dead) {
+                return;
+            }
+            setInterval(() => {
+                //console.log(pipeX)
+                draw();
+                movePipe();
+                moveBird();
+            }, 1000/fps);
+        }
+        window.onresize = resize_canvas;
+        
+        window.addEventListener('keydown', (e) => {
+            if (e.key = ' ') {
+                jump = 10;
+            }
+        })
+        window.addEventListener('mousedown', (e) => {
+                jump = 10;
+        })
+        
+        function draw(){
+            //draws background
+            drawRect(0,0,canvas.width,canvas.height, 'lightskyblue');
+            //draws pipe1
+            ctx.fillStyle = 'limegreen';
+            ctx.fillRect(pipeX, 0, 50, canvas.height);
+            ctx.clearRect(pipeX,gap,50,200);
+            //draw pipe2
+            ctx.fillRect(pipeX2, 0, 50, canvas.height);
+            ctx.clearRect(pipeX2,gap2,50,200);
+            //draws bird
+            drawCircle(birdX, birdY, 20, 'yellow');
+            //draws score
+            ctx.font = '100px Comic Sans MS';
+            ctx.fillText(score,  canvas.width/2 - ctx.measureText(score.toString()).width/2, 100);
+        }
+        
+        
+        
+        function movePipe(){
+            if (dead) {
+                return;
+            }
+            if(pipeX < -50){
+                gap = randomiseGap();
+                pipeX = Math.ceil(canvas.width / birdX) * birdX;
+            }
+            else{
+                pipeX -= 10;
+                console.log(pipeX);
+            }
+            if(pipeX2 < -50){
+                gap2 = randomiseGap();
+                pipeX2 = Math.ceil(canvas.width / birdX) * birdX;
+            }
+            else{
+                pipeX2 -= 10;
+            }
+            if (pipeX === birdX && birdY < gap || pipeX === birdX && birdY > gap + 200 || pipeX2 === birdX && birdY < gap2 || pipeX2 === birdX && birdY > gap2 + 200) {
+                dead = true; 
+                jumpForce = 0;
+                if (birdY > canvas.height + 20) {
+                    birdY = canvas.height - 15;
+                    gravity = 0;
+                }
+            }
+            if (pipeX === birdX && !dead || pipeX2 == birdX && !dead) {
+                score++;
+            }
+        }
+        
+        function moveBird(){
+            if(jump > 0){
+                if (birdY < 30) {
+                    birdY -= jumpForce - gravity ;
+                }
+                else{
+                    birdY -= jumpForce;
+                }
+                jump--;
+            }
+            else{
+            birdY += gravity;
+            }
+        
+            if (birdY > canvas.height + 20) {
+                birdY = canvas.height - 15;
+                dead = true;
+                gravity = 0;
+                jumpForce = 0;
+            }
+        }
+        
+        function drawRect(leftX,topY, width, height, colour){
+            ctx.fillStyle = colour;
+            ctx.fillRect(leftX,topY,width, height);
+        }
+        
+        function drawCircle(x, y, radius, colour){
+            ctx.fillStyle = colour;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI*2, true)
+            ctx.fill();
+        }
+        
+        function resize_canvas(){
+            let canvas = document.getElementById("canvas");
+            if (canvas.width < window.innerWidth || canvas.width > window.innerWidth)
+            {
+                canvas.width  = window.innerWidth - 20;
+            }
+        
+            if (canvas.height < window.innerHeight || canvas.height > window.innerHeight)
+            {
+                canvas.height = window.innerHeight - 20;
+            }
+            birdX = 100% canvas.width;
+        }
+        
+        function randomiseGap(){
+            return Math.random() * (canvas.height - 200);
+        }
+        
+        function reset(){
+            pipeX = 500;
+            pipeX2 = 1000;
+            birdY = 550;
+        }</script>
+</body>
+</html>
