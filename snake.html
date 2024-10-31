@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake</title>
+</head>
+<body>
+    <canvas id="canvas" width="800" height="600"></canvas>
+
+
+
+
+    <script>let canvas;
+        let ctx;
+        let dir = 'r';
+        let moveDist = 20;
+        let snake={
+            x: 0,
+            y: 0
+        };
+        let apple={
+            x:0,
+            y:0
+        };
+        let snakeBody =[
+            {x:0, y:0}
+        ];
+        let snakeBodyY = [];
+        let snakeBodyX = [];
+        let length = 4;
+        let ateFood;
+        
+        window.onload = function(){
+            resize_canvas();
+            canvas = document.getElementById('canvas');
+            ctx = canvas.getContext('2d');
+            snake.x = round20(canvas.width/2) - 20
+            snake.y = round20(canvas.height/2) - 20;
+            spawnApple();
+            let fps = 10;
+            setInterval(() => {
+                draw();
+                move();
+            }, 1000/fps);
+        }
+        
+        window.onresize = function(){
+            resize_canvas();
+        }
+        
+        window.addEventListener('keydown' ,(e) =>{
+            if (e.key == 'ArrowDown' && dir != 'u' || e.key == 's' && dir != 'u') {
+                setTimeout(() => {
+                    dir = 'd';
+                }, 50);
+            }
+            else if (e.key == 'ArrowUp' && dir != 'd' || e.key == 'w' && dir != 'd') {
+                setTimeout(() => {
+                    dir = 'u';
+                }, 50);
+            }
+            else if (e.key == 'ArrowLeft' && dir != 'r' || e.key == 'a' && dir != 'r') {
+                setTimeout(() => {
+                    dir = 'l';
+                }, 50);
+            }
+            else if (e.key == 'ArrowRight' && dir != 'l' || e.key == 'd' && dir != 'l') {
+                setTimeout(() => {
+                    dir = 'r';
+                }, 50);
+            }
+        })
+        
+        function draw(){
+            //draws background
+            drawRect(0,0,canvas.width,canvas.height, 'black');   
+            //draws apple
+            drawRect(apple.x,apple.y,20,20,'red');
+            //draws snake
+            drawSnake();
+        }
+        
+        function drawSnake(){
+            drawRect(snake.x, snake.y, 20, 20, 'aqua')
+            for(let i = 0; i < length; i++){
+                drawRect(snakeBodyX[i], snakeBodyY[i], 20, 20, 'teal')  
+                
+                if(snake.x === snakeBodyX[i] && snake.y === snakeBodyY[i]){
+                    die();
+                }
+            } 
+            snakeBodyX.unshift(snake.x);
+            snakeBodyY.unshift(snake.y);
+            if(!ateFood && snakeBodyX.length == length){
+                snakeBodyY.pop(); 
+                snakeBodyX.pop(); 
+            } 
+            else{
+                ateFood = false;
+            }
+        }
+        
+        function move(){
+            if (snake.x > canvas.width || snake.x < 0 || snake.y > canvas.height || snake.y < 0) {
+                die();
+            }
+            switch (dir) {
+                case 'l':
+                    console.log('l');
+                    snake.x -= moveDist;
+                    break;
+                case 'r':
+                    console.log('r');
+                    snake.x += moveDist;
+                    break;
+                case 'u':
+                    console.log('u');
+                    snake.y -= moveDist;
+                    break;
+                case 'd':
+                    console.log('d');
+                    snake.y += moveDist;
+                    break;
+            
+                default:
+                    snake.x += moveDist;
+                    break;
+            }
+            if(snake.x == apple.x && snake.y == apple.y){
+                addBody();
+                spawnApple();
+            }
+        }
+        
+        function addBody(){
+            length += 4;
+            ateFood = true;
+        }
+        
+        function die(){
+            dir = 'r';
+            length = 4;
+            snake.x = round20(canvas.width/2) - 20;
+            snake.y = round20(canvas.height/2) - 20;
+            snakeBodyX = [];
+            snakeBodyY = [];
+            spawnApple();
+        }
+        
+        function drawRect(leftX,topY, width, height, colour){
+            ctx.fillStyle = colour;
+            ctx.fillRect(leftX,topY,width, height);
+        }
+        
+        function round20(x){
+            return Math.ceil(x / 20) * 20;
+        }
+        
+        function spawnApple(){
+            apple.x = round20(Math.random() * canvas.width - 20);
+            apple.y = round20(Math.random() * canvas.height - 20);
+        }
+        
+        function resize_canvas(){
+            let canvas = document.getElementById("canvas");
+            if (canvas.width < window.innerWidth || canvas.width > window.innerWidth)
+            {
+                canvas.width  = window.innerWidth - 20;
+            }
+        
+            if (canvas.height < window.innerHeight || canvas.height > window.innerHeight)
+            {
+                canvas.height = window.innerHeight - 20;
+            }
+        }</script>
+</body>
+</html>
