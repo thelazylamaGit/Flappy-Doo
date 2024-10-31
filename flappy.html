@@ -28,7 +28,7 @@
             canvas = document.getElementById('canvas');
             ctx = canvas.getContext('2d');
             let fps = 30;
-            birdY = canvas.height / 2;
+            birdY = canvas.height/2;
             gap = randomiseGap();
             gap2 = randomiseGap();
             if (dead) {
@@ -159,7 +159,7 @@
         function reset(){
             pipeX = 500;
             pipeX2 = 1000;
-            birdY = 550;
+            birdY = canvas.height/2;
             dead = false;
             jumpForce = 12;
             gravity = 10;
