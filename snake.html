@@ -1,178 +1,467 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Snake</title>
 </head>
+
 <body>
     <canvas id="canvas" width="800" height="600"></canvas>
 
-
-
-
-    <script>let canvas;
+    <script>
+        let canvas;
+        let gridSize = 20;
         let ctx;
-        let dir = 'r';
-        let moveDist = 20;
-        let snake={
+        let dir = "r";
+        let nextDir = dir;
+        let speed = 200;
+        let frame = 0;
+        let animationSpeed = 2;
+        let snakeColour = 0;
+        let background = 0;
+        let snake = {
+            y: 0,
             x: 0,
-            y: 0
         };
-        let apple={
-            x:0,
-            y:0
+        let apple = {
+            x: 0,
+            y: 0,
         };
-        let snakeBody =[
-            {x:0, y:0}
-        ];
+        let snakeBody = [{ x: 0, y: 0 }];
         let snakeBodyY = [];
         let snakeBodyX = [];
-        let length = 4;
+        let length = 1;
+        let startLength = 40;
+        let lastUpdate = 0;
         let ateFood;
-        
-        window.onload = function(){
+        let fps = 15;
+
+        const backgrounds = [
+            () => drawRect(0, 0, canvas.width, canvas.height, "black"),
+            () => drawRect(0, 0, canvas.width, canvas.height, "white"),
+            () => drawRect(0, 0, canvas.width, canvas.height, "darkgreen"),
+            () => drawChequeredBackground("#a7d948", "#8ecc39"),
+            () => drawChequeredBackground("#C4DFE6", " #66A5AD"),
+            () => drawChequeredBackground("#5361b5", " #1b3ca3"),
+            () => drawChequeredBackground("#8366b4", " #612697"),
+            () => drawChequeredBackground("#36c590", " #00a856"),
+            () => drawChequeredBackground("#feca98", " #ff9d43"),
+        ];
+
+        const snakeColours = [
+            //Default Snake
+            () => "skyblue",
+            () => "teal",
+
+            //Fire Snake
+            () => "red",
+            (i, frame) => {
+                // Fire hue range: red to yellow (~10 to 50 degrees)
+                let hueShift = getRandomInRange(10, 50, i - frame);
+
+                // Flickering lightness & Saturation
+                let randomLightness = getRandomInRange(40, 50, i + Math.sin(frame / 10) * 50,);
+                let randomSaturation = getRandomInRange(80, 100, frame + i); // Flickering saturation
+
+                return getSeedColourWithHueRange(i, hueShift, hueShift + 5, randomSaturation, randomLightness);
+            },
+
+            //Blue Snake
+            () => "skyblue",
+            (seed, frame) =>
+                getSeedColourWithHueRange(seed, 180, 200, 100, 50),
+
+            //Green Snake
+            () => "green",
+            (seed, frame) =>
+                getSeedColourWithHueRange(seed, 80, 180, 100, 30),
+
+            //Rainbow Snake
+            () => "red",
+            (seed, frame) => {
+                let hueShift = (seed / length) * 360; // Use seed in place of i
+
+                return getSeedColourWithHueRange(seed - frame, hueShift, hueShift + 5,);
+            },
+
+            //Shifting Rainbow Snake
+            (seed, frame) => {
+                let hueShift = ((seed / length) * 360 - frame * animationSpeed) % 360; // Use seed in place of i
+                hueShift = (hueShift + 360) % 360;
+                console.log(seed);
+                return getSeedColourWithHueRange(seed, hueShift, hueShift + 1, 100, 50,);
+            },
+            (seed, frame) => {
+                let hueShift = ((seed / length) * 360 - frame * animationSpeed) % 360; // Use seed in place of i
+                hueShift = (hueShift + 360) % 360;
+                console.log(seed);
+                return getSeedColourWithHueRange(seed, hueShift, hueShift + 1, 100, 50);
+            },
+
+            //Blue Glow Snake
+            () => "skyblue",
+            (seed, frame) => {
+                let hueShift = 200; // Set to a blueish hue for a cool glow
+                let saturation = 100;
+                let lightness = 50 + Math.sin(frame * 3 / 10) * 20; // Lightness oscillates over time
+                return getSeedColourWithHueRange(seed, hueShift, hueShift + 1, saturation, lightness,);
+            },
+
+            //Wave Snake
+            (s, frame) => {
+                let hueShift = ((s / length) * 360 + frame * 10) % 360; // Create a fast-moving hue wave
+                let lightness = 50 + Math.sin(s + frame / 5) * 20; // Create a lightness wave and clamps lightness
+                let saturation = 100;
+                return getSeedColourWithHueRange(s, hueShift, hueShift + 1, saturation, lightness,);
+            },
+            (s, frame) => {
+                let hueShift = ((s / length) * 360 + frame * 10) % 360; // Create a fast-moving hue wave
+                let lightness = 50 + Math.sin(s + frame / 5) * 20; // Create a lightness wave and clamps lightness
+                let saturation = 100;
+                return getSeedColourWithHueRange(s, hueShift, hueShift + 1, saturation, lightness,);
+            },
+
+            //Firework Snake
+            () => "skyblue",
+            (s, frame) => {
+                let hueShift = getRandomInRange(0, 360, s + frame); // Random hue for each segment
+                let saturation = getRandomInRange(80, 100, frame + s); // Random saturation for each frame
+                let lightness = getRandomInRange(50, 100, s + frame); // Random lightness for spark-like effect
+                return getSeedColourWithHueRange(s, hueShift, hueShift + 1, saturation, lightness,);
+            },
+
+            //Heat Snake
+            () => "red",
+            (s, frame) => {
+                let hueShift = 0 + (s / length) * 240; // Move from red (0) to blue (240)
+                let saturation = 100;
+                let lightness = 50 + Math.sin(frame / 10) * 10; // Slight flicker for heat effect
+                return getSeedColourWithHueRange(s, hueShift, hueShift + 5, saturation, lightness,);
+            },
+
+            //Strobe Snake
+            () => "skyblue",
+            (s, frame) => {
+                let hueShift = 0; // Strobe effect can work with any hue
+                let saturation = 100;
+                let lightness = frame * 2 % 20 < 10 ? 100 : 20; // Alternates between bright and dark every few frames
+                return getSeedColourWithHueRange(s, hueShift, hueShift + 1, saturation, lightness,);
+            },
+
+            //Electric Snake
+            () => "skyblue",
+            (s, frame) => {
+                let hueShift = getRandomInRange(180, 270, frame + s); // Electric blue/purple hues
+                let saturation = getRandomInRange(60, 100, frame); // Vary saturation for flickering effect
+                let lightness = getRandomInRange(40, 80, s + frame); // Random lightness to simulate electric arcs
+                return getSeedColourWithHueRange(s, hueShift, hueShift + 5, saturation, lightness,);
+            },
+        ];
+
+        window.onresize = function () {
             resize_canvas();
-            canvas = document.getElementById('canvas');
-            ctx = canvas.getContext('2d');
-            snake.x = round20(canvas.width/2) - 20
-            snake.y = round20(canvas.height/2) - 20;
-            spawnApple();
-            let fps = 10;
-            setInterval(() => {
-                draw();
-                move();
-            }, 1000/fps);
-        }
-        
-        window.onresize = function(){
+        };
+
+        window.onload = function () {
             resize_canvas();
-        }
-        
-        window.addEventListener('keydown' ,(e) =>{
-            if (e.key == 'ArrowDown' && dir != 'u' || e.key == 's' && dir != 'u') {
-                setTimeout(() => {
-                    dir = 'd';
-                }, 50);
+            canvas = document.getElementById("canvas");
+            ctx = canvas.getContext("2d");
+
+            StartGame();
+
+            window.requestAnimationFrame(gameLoop);
+        };
+
+        window.addEventListener("mousedown", (e) => {
+            snakeColour += 2;
+            if (snakeColour == snakeColours.length) {
+                snakeColour = 0;
             }
-            else if (e.key == 'ArrowUp' && dir != 'd' || e.key == 'w' && dir != 'd') {
-                setTimeout(() => {
-                    dir = 'u';
-                }, 50);
-            }
-            else if (e.key == 'ArrowLeft' && dir != 'r' || e.key == 'a' && dir != 'r') {
-                setTimeout(() => {
-                    dir = 'l';
-                }, 50);
-            }
-            else if (e.key == 'ArrowRight' && dir != 'l' || e.key == 'd' && dir != 'l') {
-                setTimeout(() => {
-                    dir = 'r';
-                }, 50);
-            }
-        })
-        
-        function draw(){
-            //draws background
-            drawRect(0,0,canvas.width,canvas.height, 'black');   
-            //draws apple
-            drawRect(apple.x,apple.y,20,20,'red');
-            //draws snake
-            drawSnake();
-        }
-        
-        function drawSnake(){
-            drawRect(snake.x, snake.y, 20, 20, 'aqua')
-            for(let i = 0; i < length; i++){
-                drawRect(snakeBodyX[i], snakeBodyY[i], 20, 20, 'teal')  
-                
-                if(snake.x === snakeBodyX[i] && snake.y === snakeBodyY[i]){
-                    die();
+        });
+
+        window.addEventListener("keydown", (e) => {
+            if (e.key.toLowerCase() == "b") {
+                background++;
+
+                if (background == backgrounds.length) {
+                    background = 0;
                 }
-            } 
-            snakeBodyX.unshift(snake.x);
-            snakeBodyY.unshift(snake.y);
-            if(!ateFood && snakeBodyX.length == length){
-                snakeBodyY.pop(); 
-                snakeBodyX.pop(); 
-            } 
-            else{
-                ateFood = false;
             }
+
+            switch (e.keyCode) {
+                case 40: // Arrow Down
+                case 83: // S
+                    if (dir !== "u") {
+                        nextDir = "d";
+                    }
+                    break;
+
+                case 38: // Arrow Up
+                case 87: // W
+                    if (dir !== "d") {
+                        nextDir = "u";
+                    }
+                    break;
+
+                case 37: // Arrow Left
+                case 65: // A
+                    if (dir !== "r") {
+                        nextDir = "l";
+                    }
+                    break;
+
+                case 39: // Arrow Right
+                case 68: // D
+                    if (dir !== "l") {
+                        nextDir = "r";
+                    }
+                    break;
+            }
+        });
+
+        function gameLoop() {
+            draw();
+            move();
+            frame++;
+
+            setTimeout(() => {
+                window.requestAnimationFrame(gameLoop);
+            }, 1000 / fps);
         }
-        
-        function move(){
-            if (snake.x > canvas.width || snake.x < 0 || snake.y > canvas.height || snake.y < 0) {
-                die();
-            }
+
+        function move() {
+            //Update direction after movement
+            dir = nextDir;
+
+            //Set Move Direction
             switch (dir) {
-                case 'l':
-                    console.log('l');
-                    snake.x -= moveDist;
+                case "l":
+                    snake.x -= gridSize;
                     break;
-                case 'r':
-                    console.log('r');
-                    snake.x += moveDist;
+                case "r":
+                    snake.x += gridSize;
                     break;
-                case 'u':
-                    console.log('u');
-                    snake.y -= moveDist;
+                case "u":
+                    snake.y -= gridSize;
                     break;
-                case 'd':
-                    console.log('d');
-                    snake.y += moveDist;
+                case "d":
+                    snake.y += gridSize;
                     break;
-            
                 default:
-                    snake.x += moveDist;
+                    snake.x += gridSize;
                     break;
             }
-            if(snake.x == apple.x && snake.y == apple.y){
+
+            //If snake goes out of bounds, wrap location
+            if (snake.x > canvas.width) {
+                snake.x = 0;
+            }
+            else if (snake.x < 0) {
+                snake.x = roundToGrid(canvas.width);
+            }
+            else if (snake.y > canvas.height) {
+                snake.y = 0;
+            }
+            else if (snake.y < 0) {
+                snake.y = roundToGrid(canvas.height);
+            }
+
+            //if snake head is in same position as body, die
+            for (let i = 0; i < length; i++) {
+                if (snake.x === snakeBodyX[i] && snake.y === snakeBodyY[i]) {
+                    StartGame();
+                }
+            }
+
+            //If snake head position == apple position, grow bigger and spawn new apple
+            if (snake.x == apple.x && snake.y == apple.y) {
                 addBody();
                 spawnApple();
             }
         }
-        
-        function addBody(){
+
+        function draw() {
+            //draws current background
+            backgrounds[background]();
+            //draws apple
+            drawRect(apple.x, apple.y, gridSize, gridSize, "red");
+            //draws snake
+            drawSnake();
+        }
+
+        function drawSnake() {
+            //Draw Snake Head
+            drawRect(snake.x, snake.y, gridSize, gridSize, snakeColours[snakeColour](-1, frame));
+
+            //Draw Snake Body
+            for (let i = 0; i < length; i++) {
+                drawRect(snakeBodyX[i], snakeBodyY[i], gridSize, gridSize, snakeColours[snakeColour + 1](i, frame));
+            }
+
+            //Adds current head position to start of body array
+            snakeBodyX.unshift(snake.x);
+            snakeBodyY.unshift(snake.y);
+
+            //If didn't eat food, remove end position of snake tail
+            if (!ateFood && snakeBodyX.length == length) {
+                snakeBodyY.pop();
+                snakeBodyX.pop();
+            }
+            //If did eat food, reset ateFood
+            else {
+                ateFood = false;
+            }
+        }
+
+        //Creates checker pattern
+        function drawChequeredBackground(colour1, colour2) {
+            const checkSize = gridSize; // Size of each square in the chequered pattern
+            for (let y = 0; y < canvas.height; y += checkSize) {
+                for (let x = 0; x < canvas.width; x += checkSize) {
+                    // Determine colour based on position
+                    const isEvenRow = (y / checkSize) % 2 === 0;
+                    const isEvenCol = (x / checkSize) % 2 === 0;
+                    const colour = (isEvenRow && isEvenCol) || (!isEvenRow && !isEvenCol) ? colour1 : colour2;
+                    drawRect(x, y, checkSize, checkSize, colour);
+                }
+            }
+        }
+
+        function addBody() {
             length += 4;
             ateFood = true;
+
+            //increase speed
+            //fps += (length / 10)
         }
-        
-        function die(){
-            dir = 'r';
-            length = 4;
-            snake.x = round20(canvas.width/2) - 20;
-            snake.y = round20(canvas.height/2) - 20;
+
+        function StartGame() {
+            dir = "r";
+            length = startLength;
+            snake.x = roundToGrid(canvas.width / 2) - gridSize;
+            snake.y = roundToGrid(canvas.height / 2) - gridSize;
             snakeBodyX = [];
             snakeBodyY = [];
             spawnApple();
         }
-        
-        function drawRect(leftX,topY, width, height, colour){
+
+        function drawRect(leftX, topY, width, height, colour) {
             ctx.fillStyle = colour;
-            ctx.fillRect(leftX,topY,width, height);
+            ctx.fillRect(leftX, topY, width, height);
         }
-        
-        function round20(x){
-            return Math.ceil(x / 20) * 20;
+
+        function roundToGrid(x) {
+            return Math.ceil(x / gridSize) * gridSize;
         }
-        
-        function spawnApple(){
-            apple.x = round20(Math.random() * canvas.width - 20);
-            apple.y = round20(Math.random() * canvas.height - 20);
+
+        function spawnApple() {
+            let valid = false
+
+            //Checks if apple is in snake body
+            while (!valid) {
+                apple.x = roundToGrid(Math.random() * canvas.width - gridSize);
+                apple.y = roundToGrid(Math.random() * canvas.height - gridSize);
+
+                valid = true
+                for (let i = 0; i < length; i++) {
+                    if (apple.x == snakeBodyX[i] && apple.y == snakeBodyY[i]) {
+                        valid = false;
+                        break;
+                    }
+                }
+            }
+
         }
-        
-        function resize_canvas(){
+
+        //Colour functions
+
+        function getRandomColour(seed) {
+            let letters = "0123456789ABCDEF";
+            let color = "#";
+            for (let i = 0; i < 6; i++) {
+                let randomIndex = Math.floor(seededRandom(seed + i) * 16);
+                color += letters[randomIndex];
+            }
+        }
+        function seededRandom(seed) {
+            let x = Math.sin(seed) * 10000;
+            return x - Math.floor(x);
+        }
+
+        function getRandomInRange(min, max, seed) {
+            return Math.floor(seededRandom(seed) * (max - min + 1)) + min;
+        }
+
+        function HSLToHex(h, s, l) {
+            s /= 100;
+            l /= 100;
+
+            let c = (1 - Math.abs(2 * l - 1)) * s;
+            let x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+            let m = l - c / 2;
+            let r = 0,
+                g = 0,
+                b = 0;
+
+            if (0 <= h && h < 60) {
+                r = c;
+                g = x;
+            } else if (60 <= h && h < 120) {
+                r = x;
+                g = c;
+            } else if (120 <= h && h < 180) {
+                g = c;
+                b = x;
+            } else if (180 <= h && h < 240) {
+                g = x;
+                b = c;
+            } else if (240 <= h && h < 300) {
+                r = x;
+                b = c;
+            } else if (300 <= h && h < 360) {
+                r = c;
+                b = x;
+            }
+
+            r = Math.round((r + m) * 255);
+            g = Math.round((g + m) * 255);
+            b = Math.round((b + m) * 255);
+
+            return `#${((1 << 24) + (r << 16) + (g << 8) + b)
+                .toString(16)
+                .slice(1)
+                .toUpperCase()}`;
+        }
+
+        function getSeedColourWithHueRange(
+            seed,
+            hueMin,
+            hueMax,
+            saturation = 100,
+            lightness = 50,
+        ) {
+            // Generate a random hue within the specified range and ensure its a whole number
+            let hue = Math.floor(getRandomInRange(hueMin, hueMax, seed));
+
+            // Wrap hue to stay within 0-360
+            hue = hue % 360;
+
+            // Return hex code for the HSL colour
+            return HSLToHex(hue, saturation, lightness);
+        }
+
+        function resize_canvas() {
             let canvas = document.getElementById("canvas");
-            if (canvas.width < window.innerWidth || canvas.width > window.innerWidth)
-            {
-                canvas.width  = window.innerWidth - 20;
+            if (canvas.width < window.innerWidth || canvas.width > window.innerWidth) {
+                canvas.width = window.innerWidth - gridSize;
             }
-        
-            if (canvas.height < window.innerHeight || canvas.height > window.innerHeight)
-            {
-                canvas.height = window.innerHeight - 20;
+            if (canvas.height < window.innerHeight || canvas.height > window.innerHeight) {
+                canvas.height = window.innerHeight - gridSize;
             }
-        }</script>
+        }
+    </script>
 </body>
+
 </html>
